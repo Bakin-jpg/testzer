@@ -6,7 +6,7 @@ from selenium.webdriver.chrome.options import Options
 import os
 
 # URL Halaman Jadwal
-URL = "https://kilatlive.live/schedules"
+URL = "https://kilatlive.live/"
 NAMA_FILE_PLAYLIST = "jadwal_kilatlive.m3u"
 
 def scrap_jadwal_dan_buat_playlist():
