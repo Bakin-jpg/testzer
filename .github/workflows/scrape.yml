@@ -3,13 +3,19 @@ name: Scrape Jadwal Live
 on:
   schedule:
     # Menjalankan setiap 6 jam sekali.
-    # Anda bisa mengubahnya. '0 */6 * * *' artinya pada menit ke-0 setiap 6 jam.
     - cron: '0 */6 * * *'
   workflow_dispatch:
     # Baris ini memungkinkan Anda menjalankan workflow secara manual dari tab Actions
 
 jobs:
   scrape:
+    # ===================================================================
+    # INI BAGIAN PENTING YANG DITAMBAHKAN
+    # Memberi izin pada job ini untuk menulis ke repositori (git push)
+    permissions:
+      contents: write
+    # ===================================================================
+
     runs-on: ubuntu-latest
     steps:
       - name: 1. Checkout Repository
@@ -36,6 +42,6 @@ jobs:
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
           git add jadwal_kilatlive.m3u
-          # Cek apakah ada perubahan sebelum commit
+          # Cek apakah ada perubahan sebelum commit untuk menghindari error jika tidak ada jadwal baru
           git diff --staged --quiet || git commit -m "Update jadwal playlist"
           git push
