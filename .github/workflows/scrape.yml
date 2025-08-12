@@ -1,7 +1,76 @@
-  - name: 4. Commit dan Push hasil
-    run: |
-      git config --global user.name 'github-actions'
-      git config --global user.email 'github-actions@github.com'
-      git add kilatlive_playlist.m3u || echo "Tidak ada playlist baru untuk di-commit"
-      git diff --staged --quiet || git commit -m "Update playlist live event"
-      git push
+# Nama workflow yang akan muncul di tab Actions
+name: Buat Playlist Kilatlive Otomatis
+
+on:
+  # Pemicu Otomatis (sesuai jadwal)
+  schedule:
+    # Menjalankan setiap 6 jam sekali. Anda bisa mengubahnya.
+    # Formatnya adalah: 'Menit Jam Hari Bulan HariDalamMinggu'
+    # '0 */6 * * *' artinya pada menit ke-0, setiap 6 jam.
+    - cron: '0 */6 * * *'
+      
+  # Pemicu Manual
+  workflow_dispatch:
+    # Ini akan menambahkan tombol "Run workflow" di tab Actions
+    # Sangat berguna untuk melakukan tes kapan saja.
+
+jobs:
+  scrape:
+    # WAJIB: Memberi izin agar Action bisa 'git push' (menyimpan file)
+    # Ini adalah solusi dari error 'exit code 128' sebelumnya.
+    permissions:
+      contents: write
+
+    # Menjalankan di server virtual Ubuntu versi terbaru
+    runs-on: ubuntu-latest
+
+    steps:
+      # Langkah 1: Mengunduh kode dari repositori Anda ke server virtual
+      - name: 1. Checkout Repositori
+        uses: actions/checkout@v4
+
+      # Langkah 2: Menyiapkan lingkungan Python
+      - name: 2. Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # Menggunakan Python versi 3.10
+
+      # Langkah 3: Menyiapkan Browser Google Chrome di server
+      - name: 3. Set up Chrome Browser
+        uses: browser-actions/setup-chrome@latest
+
+      # Langkah 4: Menginstall library Python yang dibutuhkan oleh skrip
+      - name: 4. Install Library (Selenium)
+        run: |
+          python -m pip install --upgrade pip
+          pip install selenium
+
+      # Langkah 5: Menjalankan skrip Python utama kita
+      - name: 5. Jalankan Skrip Scraper
+        # Skrip ini akan membuat file 'kilatlive_playlist.m3u'
+        run: python scraper.py
+
+      # Langkah 6: Menyimpan file playlist yang baru ke repositori
+      - name: 6. Commit dan Push File Playlist
+        run: |
+          # Konfigurasi identitas Git untuk melakukan commit
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          
+          # Cek dulu apakah file playlist BERHASIL dibuat oleh skrip Python.
+          # Ini adalah solusi dari error 'pathspec did not match any files'.
+          if [ ! -f kilatlive_playlist.m3u ]; then
+            echo "File playlist tidak ditemukan. Mungkin tidak ada acara live saat ini. Melewati commit."
+            exit 0 # Keluar dari langkah ini dengan status SUKSES
+          fi
+          
+          # Jika file ada, tambahkan ke Git
+          echo "File playlist ditemukan, menambahkan ke commit."
+          git add kilatlive_playlist.m3u
+          
+          # Lakukan commit HANYA JIKA ada perubahan konten dari versi sebelumnya.
+          # Ini mencegah commit kosong jika jadwalnya sama persis.
+          git diff --staged --quiet || git commit -m "Update Otomatis Playlist Live Event"
+          
+          # Kirim (push) perubahan kembali ke repositori GitHub Anda
+          git push
