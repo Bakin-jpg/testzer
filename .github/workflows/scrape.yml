@@ -1,0 +1,41 @@
+name: Scrape Jadwal Live
+
+on:
+  schedule:
+    # Menjalankan setiap 6 jam sekali.
+    # Anda bisa mengubahnya. '0 */6 * * *' artinya pada menit ke-0 setiap 6 jam.
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    # Baris ini memungkinkan Anda menjalankan workflow secara manual dari tab Actions
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: 2. Set up Chrome
+        uses: browser-actions/setup-chrome@latest
+
+      - name: 3. Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: 4. Install dependensi Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install selenium
+
+      - name: 5. Jalankan Scraper
+        run: python scraper.py
+
+      - name: 6. Commit dan Push hasil playlist
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add jadwal_kilatlive.m3u
+          # Cek apakah ada perubahan sebelum commit
+          git diff --staged --quiet || git commit -m "Update jadwal playlist"
+          git push
